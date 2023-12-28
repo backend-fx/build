@@ -41,7 +41,7 @@ This project uses the Nuke build automation system to manage the build, test, an
 
 ## License
 
-This project is licensed under the [LICENSE NAME] - see the [LICENSE.md](LICENSE.md) file for details.
+This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
 
 ## Acknowledgments
 
