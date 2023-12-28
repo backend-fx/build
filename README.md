@@ -1,6 +1,6 @@
 # Backend.Fx Build Template
 
-This project uses the Nuke build automation system to manage the build, test, and publish workflows for a .NET solution. The build script is written in C# and leverages Nuke tasks to handle various aspects of the development lifecycle.
+This project is a build template that uses the Nuke build automation system to manage the build, test, and publish workflows for a .Backend.Fx solution. The build script is written in C# and leverages Nuke tasks to handle various aspects of the development lifecycle. It can be integrated as git submodule.
 
 ## Features
 
