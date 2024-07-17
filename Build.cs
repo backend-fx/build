@@ -77,13 +77,13 @@ class Build : NukeBuild
                     .SetProject(csproj)
                     .SetOutputDirectory(ArtifactsDirectory)
                     .SetVersion(GitVersion.NuGetVersion)
-                    .SetVerbosity(DotNetVerbosity.Minimal)
+                    .SetVerbosity(DotNetVerbosity.minimal)
                     .SetConfiguration(Configuration));
             }
         });
 
     Target Publish => nuke => nuke
-        .OnlyWhenDynamic(() => !IsLocalBuild && Configuration.Equals(Configuration.Release))
+        .OnlyWhenDynamic(() => !IsLocalBuild && !Github.IsDependabotPullRequest() && Configuration.Equals(Configuration.Release))
         .DependsOn(Pack)
         .Executes(() =>
         {
