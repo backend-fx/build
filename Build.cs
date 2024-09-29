@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Nuke.Common;
 using Nuke.Common.Git;
 using Nuke.Common.IO;
