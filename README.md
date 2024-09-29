@@ -9,7 +9,7 @@ This project is a build template that uses the Nuke build automation system to m
 - **Compile:** Builds the project with version information from Git.
 - **Test:** Runs unit tests for the project.
 - **Pack:** Creates NuGet packages for the project.
-- **Publish:** Pushes NuGet packages to either NuGet.org (`main` branch) or myget.org.
+- **Publish:** Pushes NuGet packages to either NuGet.org (`v*.*.*` tag) or myget.org.
 
 ## Usage
 
