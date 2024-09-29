@@ -87,7 +87,8 @@ class Build : NukeBuild
         .DependsOn(Pack)
         .Executes(() =>
         {
-            bool pushToNuget = GitRepository.Branch == "main";
+            var releaseRegex = new Regex(@"v\d+\.\d+\.\d+", RegexOptions.Compiled);
+            bool pushToNuget = GitRepository.Tags.Any(tag => releaseRegex.IsMatch(tag));
 
             foreach (var nupkg in ArtifactsDirectory.GlobFiles("*.nupkg"))
             {
