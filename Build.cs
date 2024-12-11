@@ -27,7 +27,7 @@ class Build : NukeBuild
 
     [Solution] readonly Solution Solution;
     [GitRepository] readonly GitRepository GitRepository;
-    [GitVersion(Framework = "net6.0", NoFetch = true)] readonly GitVersion GitVersion;
+    [GitVersion(NoFetch = true)] readonly GitVersion GitVersion;
 
     AbsolutePath ArtifactsDirectory => RootDirectory / "artifacts";
 
@@ -74,10 +74,11 @@ class Build : NukeBuild
             var csprojs = RootDirectory.GlobFiles("**/*.csproj").Where(p => !p.NameWithoutExtension.EndsWith("Tests"));
             foreach (var csproj in csprojs)
             {
+                Log.Information("Version: " + GitVersion.SemVer);
                 DotNetPack(s => s
                     .SetProject(csproj)
                     .SetOutputDirectory(ArtifactsDirectory)
-                    .SetVersion(GitVersion.NuGetVersion)
+                    .SetVersion(GitVersion.SemVer)
                     .SetVerbosity(DotNetVerbosity.minimal)
                     .SetConfiguration(Configuration));
             }
