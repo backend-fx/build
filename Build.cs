@@ -1,6 +1,5 @@
 using System;
 using System.Linq;
-using System.Text.RegularExpressions;
 using Nuke.Common;
 using Nuke.Common.Git;
 using Nuke.Common.IO;
@@ -17,11 +16,6 @@ class Build : NukeBuild
 
     [Parameter("Configuration to build - Default is 'Debug' (local) or 'Release' (server)")]
     readonly Configuration Configuration = IsLocalBuild ? Configuration.Debug : Configuration.Release;
-
-    readonly string MygetApiKey = Environment.GetEnvironmentVariable("MYGET_APIKEY");
-
-    readonly string MygetFeedUrl = 
-        Environment.GetEnvironmentVariable("MYGET_FEED_URL") ?? "https://www.myget.org/F/marcwittke/api/v3/index.json";
 
     readonly string NugetApiKey = Environment.GetEnvironmentVariable("NUGET_APIKEY");
 
@@ -71,14 +65,20 @@ class Build : NukeBuild
         .DependsOn(Test)
         .Executes(() =>
         {
-            var csprojs = RootDirectory.GlobFiles("**/*.csproj").Where(p => !p.NameWithoutExtension.EndsWith("Tests"));
-            foreach (var csproj in csprojs)
+            var projectFiles = RootDirectory.GlobFiles("**/*.csproj").Where(p => !p.NameWithoutExtension.EndsWith("Tests"));
+            foreach (var projectFile in projectFiles)
             {
-                Log.Information("Version: " + GitVersion.SemVer);
+                var version = GitVersion.MajorMinorPatch;
+                if (int.TryParse(GitVersion.CommitsSinceVersionSource, out int commits) && commits > 0)
+                {
+                    version = $"{version}-beta{GitVersion.CommitsSinceVersionSourcePadded}";
+                }
+                
+                Log.Information("Version: " + version);
                 DotNetPack(s => s
-                    .SetProject(csproj)
+                    .SetProject(projectFile)
                     .SetOutputDirectory(ArtifactsDirectory)
-                    .SetVersion(GitVersion.SemVer)
+                    .SetVersion(version)
                     .SetVerbosity(DotNetVerbosity.minimal)
                     .SetConfiguration(Configuration));
             }
@@ -89,28 +89,17 @@ class Build : NukeBuild
         .DependsOn(Pack)
         .Executes(() =>
         {
-            var releaseRegex = new Regex(@"v\d+\.\d+\.\d+", RegexOptions.Compiled);
-            bool pushToNuget = GitRepository.Tags.Any(tag => releaseRegex.IsMatch(tag));
-
-            foreach (var nupkg in ArtifactsDirectory.GlobFiles("*.nupkg"))
+            // ReSharper disable once StringLiteralTypo
+            foreach (var nugetPackage in ArtifactsDirectory.GlobFiles("*.nupkg"))
             {
                 DotNetNuGetPush(s =>
                 {
                     s = s
-                        .SetTargetPath(nupkg)
+                        .SetTargetPath(nugetPackage)
                         .EnableNoServiceEndpoint()
-                        .EnableSkipDuplicate();
-
-                    if (pushToNuget)
-                    {
-                        s = s.SetSource("https://api.nuget.org/v3/index.json")
-                            .SetApiKey(NugetApiKey);
-                    }
-                    else
-                    {
-                        s = s.SetSource(MygetFeedUrl)
-                            .SetApiKey(MygetApiKey);
-                    }
+                        .EnableSkipDuplicate()
+                        .SetSource("https://api.nuget.org/v3/index.json")
+                        .SetApiKey(NugetApiKey);
 
                     return s;
                 });
