@@ -5,12 +5,13 @@ var isRunningInCI = !string.IsNullOrEmpty(EnvironmentVariable("CI")) || !string.
 var configuration = Argument<string>("configuration", isRunningInCI ? "Release" : "Debug");
 var nugetApiKey = EnvironmentVariable("NUGET_APIKEY");
 
-var artifactsDirectory = new DirectoryPath("artifacts");
+var artifactsDirectory = new DirectoryPath("../artifacts");
 var testResultsDirectory = artifactsDirectory.Combine("test-results");
 var solutionPath = Argument<string>("solution", null);
 var solutionFile = (solutionPath != null
     ? GetFiles(solutionPath).FirstOrDefault()
     : GetFiles("../*.slnx").Concat(GetFiles("../*.sln")).FirstOrDefault()) ?? throw new Exception("No solution file found. Please specify the solution file path using the --solution argument.");
+var solutionDirectory = solutionFile.GetDirectory();
 
 var gitVersionInfo = new Lazy<GitVersionInfo>(() =>
 {
@@ -69,7 +70,7 @@ Task("Test")
     .Does(() =>
     {
         EnsureDirectoryExists(testResultsDirectory);
-        GetFiles("**/*Tests.csproj")
+        GetFiles(solutionDirectory.FullPath + "/**/*Tests.csproj")
             .AsParallel()
             .ForAll(testProjectFile =>
             {
@@ -91,7 +92,7 @@ Task("Pack")
     .IsDependentOn("Test")
     .Does(() =>
     {
-        var projectFiles = GetFiles("**/*.csproj")
+        var projectFiles = GetFiles(solutionDirectory.FullPath + "/**/*.csproj")
             .Where(p => !p.GetFilename().ToString().EndsWith("Tests.csproj"));
 
         foreach (var projectFile in projectFiles)
