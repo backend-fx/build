@@ -8,7 +8,7 @@ This repository provides a reusable Cake build setup for Backend.Fx projects. It
 - **GetVersion:** Resolves and prints version information from GitVersion.
 - **Restore:** Restores NuGet dependencies.
 - **Compile:** Builds the solution with CI/versioning MSBuild properties.
-- **Test:** Executes `dotnet test`.
+- **Test:** Executes `dotnet test` and writes TRX reports to `artifacts/test-results`.
 - **Pack:** Creates NuGet packages for all non-test projects.
 - **Publish:** Pushes created packages to NuGet.org.
 

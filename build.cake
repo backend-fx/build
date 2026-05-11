@@ -6,6 +6,7 @@ var configuration = Argument<string>("configuration", isRunningInCI ? "Release" 
 var nugetApiKey = EnvironmentVariable("NUGET_APIKEY");
 
 var artifactsDirectory = Directory("artifacts");
+var testResultsDirectory = artifactsDirectory.Combine("test-results");
 var solutionPath = Argument<string>("solution", null);
 var solutionFile = (solutionPath != null
     ? GetFiles(solutionPath).FirstOrDefault()
@@ -67,12 +68,23 @@ Task("Test")
     .ContinueOnError()
     .Does(() =>
     {
-        DotNetTest(solutionFile.FullPath, new DotNetTestSettings
-        {
-            Configuration = configuration,
-            NoRestore = true,
-            NoBuild = true
-        });
+        EnsureDirectoryExists(testResultsDirectory);
+        GetFiles("**/*Tests.csproj")
+            .AsParallel()
+            .ForAll(testProjectFile =>
+            {
+                var logFileName = $"{testProjectFile.GetFilenameWithoutExtension()}.trx";
+                Information("Testing {0} -> {1}", testProjectFile, testResultsDirectory.CombineWithFilePath(logFileName));
+
+                DotNetTest(testProjectFile.FullPath, new DotNetTestSettings
+                {
+                    Configuration = configuration,
+                    NoRestore = true,
+                    NoBuild = true,
+                    ResultsDirectory = testResultsDirectory,
+                    Loggers = new[] { $"trx;LogFileName={logFileName}" }
+                });
+            });
     });
 
 Task("Pack")
