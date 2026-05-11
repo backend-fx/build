@@ -1,21 +1,28 @@
 #tool "dotnet:?package=GitVersion.Tool&version=6.2.0"
 
-var target = Argument("target", "Publish");
+var target = Argument<string>("target", "Publish");
 var isRunningInCI = !string.IsNullOrEmpty(EnvironmentVariable("CI")) || !string.IsNullOrEmpty(EnvironmentVariable("GITHUB_ACTIONS"));
-var configuration = Argument("configuration", isRunningInCI ? "Release" : "Debug");
+var configuration = Argument<string>("configuration", isRunningInCI ? "Release" : "Debug");
 var nugetApiKey = EnvironmentVariable("NUGET_APIKEY");
 
 var artifactsDirectory = Directory("artifacts");
-var solutionPath = Argument("solution", null as string);
-var solutionFile = solutionPath != null 
+var solutionPath = Argument<string>("solution", null);
+var solutionFile = (solutionPath != null
     ? GetFiles(solutionPath).FirstOrDefault()
-    : GetFiles("../*.slnx").Concat(GetFiles("../*.sln")).FirstOrDefault();
-var version = "";
+    : GetFiles("../*.slnx").Concat(GetFiles("../*.sln")).FirstOrDefault()) ?? throw new Exception("No solution file found. Please specify the solution file path using the --solution argument.");
 
-if (solutionFile == null)
+var gitVersionInfo = new Lazy<GitVersionInfo>(() =>
 {
-    throw new Exception("No solution file found. Please specify the solution file path using the --solution argument.");
-}
+    var resolvedVersion = GitVersion(new GitVersionSettings { NoFetch = true });
+    return new GitVersionInfo(
+        resolvedVersion.SemVer,
+        resolvedVersion.AssemblySemVer,
+        resolvedVersion.AssemblySemFileVer,
+        resolvedVersion.InformationalVersion,
+        resolvedVersion.MajorMinorPatch,
+        resolvedVersion.CommitsSinceVersionSource ?? 0,
+        resolvedVersion.CommitsSinceVersionSourcePadded);
+});
 
 Task("Clean")
     .Does(() =>
@@ -29,9 +36,7 @@ Task("Clean")
 Task("GetVersion")
     .Does(() =>
     {
-        var gitVersion = GitVersion(new GitVersionSettings { NoFetch = true });
-        version = gitVersion.SemVer;
-        Information("Version: {0}", version);
+        Information("Version: {0}", gitVersionInfo.Value.SemVer);
     });
 
 Task("Restore")
@@ -43,18 +48,17 @@ Task("Restore")
 
 Task("Compile")
     .IsDependentOn("Restore")
-    .IsDependentOn("GetVersion")
     .Does(() =>
     {
-        var gitVersion = GitVersion(new GitVersionSettings { NoFetch = true });
         DotNetBuild(solutionFile.FullPath, new DotNetBuildSettings
         {
             Configuration = configuration,
             NoRestore = true,
             MSBuildSettings = new DotNetMSBuildSettings()
-                .WithProperty("AssemblyVersion", gitVersion.AssemblySemVer)
-                .WithProperty("FileVersion", gitVersion.AssemblySemFileVer)
-                .WithProperty("InformationalVersion", gitVersion.InformationalVersion)
+                .WithProperty("ContinuousIntegrationBuild", isRunningInCI ? "true" : "false")
+                .WithProperty("AssemblyVersion", gitVersionInfo.Value.AssemblySemVer)
+                .WithProperty("FileVersion", gitVersionInfo.Value.AssemblySemFileVer)
+                .WithProperty("InformationalVersion", gitVersionInfo.Value.InformationalVersion)
         });
     });
 
@@ -75,16 +79,15 @@ Task("Pack")
     .IsDependentOn("Test")
     .Does(() =>
     {
-        var gitVersion = GitVersion(new GitVersionSettings { NoFetch = true });
         var projectFiles = GetFiles("**/*.csproj")
             .Where(p => !p.GetFilename().ToString().EndsWith("Tests.csproj"));
 
         foreach (var projectFile in projectFiles)
         {
-            var packVersion = gitVersion.MajorMinorPatch;
-            if (gitVersion.CommitsSinceVersionSource > 0)
+            var packVersion = gitVersionInfo.Value.MajorMinorPatch;
+            if (gitVersionInfo.Value.CommitsSinceVersionSource > 0)
             {
-                packVersion = $"{packVersion}-beta{gitVersion.CommitsSinceVersionSourcePadded}";
+                packVersion = $"{packVersion}-beta{gitVersionInfo.Value.CommitsSinceVersionSourcePadded}";
             }
 
             Information("Packing {0} as version {1}", projectFile, packVersion);
@@ -95,8 +98,7 @@ Task("Pack")
                 VersionSuffix = null,
                 NoBuild = true,
                 NoRestore = true,
-                MSBuildSettings = new DotNetMSBuildSettings()
-                    .WithProperty("Version", packVersion)
+                MSBuildSettings = new DotNetMSBuildSettings().WithProperty("Version", packVersion)
             });
         }
     });
@@ -120,3 +122,12 @@ Task("Publish")
     });
 
 RunTarget(target);
+
+record struct GitVersionInfo(
+    string SemVer,
+    string AssemblySemVer, 
+    string AssemblySemFileVer, 
+    string InformationalVersion, 
+    string MajorMinorPatch, 
+    int CommitsSinceVersionSource, 
+    string CommitsSinceVersionSourcePadded);
