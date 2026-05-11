@@ -11,6 +11,9 @@
 [Nn]upkg/
 artifacts/
 
+# global tools packages
+tools
+
 # Visual Studio 2015 cache/options directory
 .vs/
 .vscode/
@@ -32,5 +35,4 @@ _ReSharper*/
 .idea/
 *.sln.iml
 
-#nuke.build
-.nuke/temp
+
