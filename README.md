@@ -1,49 +1,65 @@
 # Backend.Fx Build Template
 
-This project is a build template that uses the Nuke build automation system to manage the build, test, and publish workflows for a .Backend.Fx solution. The build script is written in C# and leverages Nuke tasks to handle various aspects of the development lifecycle. It can be integrated as git submodule.
+This repository provides a reusable Cake build setup for Backend.Fx projects. It can be integrated as a git submodule and covers the common build lifecycle: clean, restore, compile, test, pack, and publish.
 
 ## Features
 
-- **Clean:** Deletes build artifacts and directories.
-- **Restore:** Restores NuGet packages for the solution.
-- **Compile:** Builds the project with version information from Git.
-- **Test:** Runs unit tests for the project.
-- **Pack:** Creates NuGet packages for the project.
-- **Publish:** Pushes NuGet packages to either NuGet.org (`v*.*.*` tag) or myget.org.
+- **Clean:** Removes `bin`/`obj` folders and cleans the `artifacts` directory.
+- **GetVersion:** Resolves and prints version information from GitVersion.
+- **Restore:** Restores NuGet dependencies.
+- **Compile:** Builds the solution with CI/versioning MSBuild properties.
+- **Test:** Executes `dotnet test`.
+- **Pack:** Creates NuGet packages for all non-test projects.
+- **Publish:** Pushes created packages to NuGet.org.
+
+## Prerequisites
+
+- [.NET SDK](https://dotnet.microsoft.com/download)
+
+No global Cake installation is required. The wrapper script restores local tools and runs Cake.
 
 ## Usage
 
-### Prerequisites
+Run the default target (`Publish`) via the wrapper:
 
-- [.NET SDK](https://dotnet.microsoft.com/download) installed
-- (Optional) [Nuke](https://nuke.build/) installed globally for command-line execution
+```bash
+./build.sh
+```
 
-### Build and Publish
+Run a specific target:
 
-1. Clone the repository.
-2. Set the necessary environment variables for API keys and feed URLs.
-3. Run the build script:
+```bash
+./build.sh --target=Pack
+./build.sh --target=Test
+```
 
-   ```bash
-   ./build.sh
-   ```
+Specify solution path/pattern explicitly if auto-discovery is not sufficient:
 
-   or using Nuke:
+```bash
+./build.sh --solution="../MyProject.sln"
+```
 
-   ```bash
-   nuke Publish
-   ```
+## Parameters
 
-## Configuration
+- `target`: Cake target to run. Default: `Publish`.
+- `configuration`: Build configuration. Default is `Debug` locally and `Release` in CI.
+- `solution`: Optional solution file path/pattern. If omitted, the script searches for `../*.slnx` or `../*.sln`.
 
-- The build configuration (Debug/Release) is set via the `Configuration` parameter.
-- API keys and feed URLs are configured through environment variables.
+## Environment Variables
+
+- `CI` or `GITHUB_ACTIONS`: Enables CI behavior.
+- `NUGET_APIKEY`: Required for publishing packages.
+
+## Publish Behavior
+
+- `Publish` runs only when `CI`/`GITHUB_ACTIONS` is set and configuration is `Release`.
+- Packages are pushed to `https://api.nuget.org/v3/index.json` with duplicate uploads skipped.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
+This project is licensed under the MIT License. See [LICENSE.md](LICENSE.md).
 
 ## Acknowledgments
 
-- [Nuke](https://nuke.build/) - Build automation system for C#/.NET projects.
-- [GitVersion](https://gitversion.net/) - Semantic versioning for Git.
+- [Cake](https://cakebuild.net/) - Cross-platform build automation for .NET.
+- [GitVersion](https://gitversion.net/) - Semantic versioning from Git metadata.
