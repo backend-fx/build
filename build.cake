@@ -5,7 +5,7 @@ var isRunningInCI = !string.IsNullOrEmpty(EnvironmentVariable("CI")) || !string.
 var configuration = Argument<string>("configuration", isRunningInCI ? "Release" : "Debug");
 var nugetApiKey = EnvironmentVariable("NUGET_APIKEY");
 
-var artifactsDirectory = Directory("artifacts");
+var artifactsDirectory = new DirectoryPath("artifacts");
 var testResultsDirectory = artifactsDirectory.Combine("test-results");
 var solutionPath = Argument<string>("solution", null);
 var solutionFile = (solutionPath != null
