@@ -11,11 +11,14 @@ var solutionPath = Argument<string>("solution", null);
 var solutionFile = (solutionPath != null
     ? GetFiles(solutionPath).FirstOrDefault()
     : GetFiles("../*.slnx").Concat(GetFiles("../*.sln")).FirstOrDefault()) ?? throw new Exception("No solution file found. Please specify the solution file path using the --solution argument.");
-var solutionDirectory = solutionFile.GetDirectory();
-
+var solutionDirectory = MakeAbsolute(solutionFile.GetDirectory());
 var gitVersionInfo = new Lazy<GitVersionInfo>(() =>
 {
-    var resolvedVersion = GitVersion(new GitVersionSettings { NoFetch = true });
+    var resolvedVersion = GitVersion(new GitVersionSettings
+    {
+        NoFetch = true,
+        WorkingDirectory = solutionDirectory
+    });
     return new GitVersionInfo(
         resolvedVersion.SemVer,
         resolvedVersion.AssemblySemVer,
@@ -98,6 +101,7 @@ Task("Pack")
         foreach (var projectFile in projectFiles)
         {
             var packVersion = gitVersionInfo.Value.MajorMinorPatch;
+
             if (gitVersionInfo.Value.CommitsSinceVersionSource > 0)
             {
                 packVersion = $"{packVersion}-beta{gitVersionInfo.Value.CommitsSinceVersionSourcePadded}";
